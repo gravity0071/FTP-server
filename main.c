@@ -14,7 +14,7 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 
-typedef struct   //定义结构体Ftpd
+typedef struct   
 {
     int fd;
     char cmd[8192];
@@ -28,19 +28,19 @@ typedef struct   //定义结构体Ftpd
 void writeMsg(Ftpd *ftp, int code, char *msg) {
     char buf[1024];
     if (msg != NULL)
-        sprintf(buf, "%d %s\r\n", code, msg);  //将内容写到buf里面
+        sprintf(buf, "%d %s\r\n", code, msg); 
     else
         sprintf(buf, "%d\r\n", code);
-    write(ftp->fd, buf, strlen(buf));     //在client显示buf里面的内容
+    write(ftp->fd, buf, strlen(buf));     
 }
 
 void printInfo(Ftpd *ftp, char *info) {
     char buf[512];
-    getcwd(buf, sizeof(buf));        //获取当前工作目录
+    getcwd(buf, sizeof(buf));        
     printf("%s\t%s\texecute %s\n", ftp->username, buf, info);
 }
 
-int createServerSock(int port)  //创建server socket（默认端口21）
+int createServerSock(int port)  
 {
     int sockfd;
     int reuse = 1;
@@ -141,11 +141,9 @@ int getTransferFD(Ftpd *ftp,
 
     // Error handling for socket creation failure
     if (sockfd < 0) {
-        writeMsg(ftp, 425, "Use PORT/PASV first");  // Send error message to the client
+        writeMsg(ftp, 425, "Use PORT/PASV first");  
         return -1;
     }
-
-    // Send success message to the client, e.g., "150 File status okay; about to open data connection"
     writeMsg(ftp, 150, msg);
 
     return sockfd;  // Return the socket file descriptor for the data transfer
@@ -209,7 +207,7 @@ void login(Ftpd *ftp) {
         if (strcmp(ftp->cmd, "USER") == 0) {
             strcpy(ftp->username, ftp->arg);     // Copy the argument (username) to ftp->username
             pw = getpwnam(ftp->username);        // Retrieve user login-related information
-            printf("Receive username: %s\n", ftp->username);  // Print the received username
+            printf("Receive username: %s\n", ftp->username);  
             writeMsg(ftp, 331, "Please enter password");   // Send 331 (username OK, need password)
         }
 
@@ -218,23 +216,21 @@ void login(Ftpd *ftp) {
             // If the password is correct, break out of the loop (login success)
             if (checkPasswd(ftp->username, ftp->arg) == 0)
                 break;
-            writeMsg(ftp, 530, "Login failed");  // Send 530 (login failure)
+            writeMsg(ftp, 530, "Login failed");  
             pw = NULL;  // Reset the user info
         }
 
             // If the command is "QUIT", handle the exit
         else if (strcmp(ftp->cmd, "QUIT") == 0) {
-            writeMsg(ftp, 221, "GoodBye");  // Send 221 (goodbye message)
+            writeMsg(ftp, 221, "GoodBye");  
             return;  // Exit the login function
         }
 
             // If none of the above, send an error message
         else {
-            writeMsg(ftp, 530, "Login with USER and PASS");  // Send 530 (ask to login properly)
+            writeMsg(ftp, 530, "Login with USER and PASS");  
         }
     }
-
-    // Send 230 (login successful)
     writeMsg(ftp, 230, "Login successful");
 }
 
@@ -243,7 +239,7 @@ void handlePWD(Ftpd *ftp) {
     char buf[1024] = {0}; //hold the current working directory path
 
     getcwd(buf, sizeof(buf));
-    writeMsg(ftp, 257, buf); // response code 257, which indicates “Path created”
+    writeMsg(ftp, 257, buf); 
     printInfo(ftp, "PWD successfull");
 }
 
@@ -251,13 +247,13 @@ void handlePWD(Ftpd *ftp) {
 void handleCWD(Ftpd *ftp) {
     // Check if argument is present and attempt to change the directory
     if (!ftp->arg || chdir(ftp->arg) != 0) {  // Check if no argument or directory change fails
-        writeMsg(ftp, 550, "CWD Error");      // Send error message to client (550)
+        writeMsg(ftp, 550, "CWD Error");      
         printInfo(ftp, "CWD failed");         // Log failure
         return;                               // Exit the function
     }
 
     // If successful, send success message to client
-    writeMsg(ftp, 250, "CWD successful");     // Send success message (250)
+    writeMsg(ftp, 250, "CWD successful");     
     printInfo(ftp, "CWD successful");         // Log success
 }
 
@@ -265,12 +261,12 @@ void handleCWD(Ftpd *ftp) {
 void handleCDUP(Ftpd *ftp) {
     // Attempt to change the directory to the parent directory ("..")
     if (chdir("..") != 0) {         // chdir: Changes the current working directory, returns 0 on success, -1 on failure
-        writeMsg(ftp, 550, "CDUP Error");   // Send an error message (550) to the client if the directory change failed
+        writeMsg(ftp, 550, "CDUP Error");  
         printInfo(ftp, "CDUP failed");      // Log that the CDUP command failed
         return;                             // Exit the function
     }
 
-    writeMsg(ftp, 250, "CDUP successful");  // Send a success message (250) to the client
+    writeMsg(ftp, 250, "CDUP successful");  
     printInfo(ftp, "CDUP successful");      // Log that the CDUP command was successful
 }
 
